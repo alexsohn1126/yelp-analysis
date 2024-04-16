@@ -18,9 +18,8 @@ The repo is structured as:
 
 ## Statement on LLM usage
 
-LLM such as ChatGPT was used to assist writing scripts. Further details on the usage is documented in `other/llm/usage.txt`. 
+LLM such as ChatGPT was used to assist writing scripts. Further details on the usage is documented in `other/llm/usage.txt`.
 
-## Some checks
+## Downloading dataset
 
-- [ ] Update comments in R scripts
-- [ ] Remove this checklist
+The original dataset was too big to include in this repo. Visit https://www.yelp.com/dataset, then click "Download Dataset", fill out the personal information, and download the JSON (NOT the photos). Extract and place the files in `data/raw_data` folder (There should be `PLACE_EXTRACTED_YELP_DATASET_HERE` file there).

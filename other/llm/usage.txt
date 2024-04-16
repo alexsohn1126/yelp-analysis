@@ -112,3 +112,200 @@ restaurants <- tibble(
 print(restaurants)
 
 Now, the rating column contains floating-point values between 1 and 5, generated using the runif() function.
+
+User
+I have a tibble in R which has a column with a list of attributes that are comma separated. How do I get the list of unique attributes from the column? Below is a sample of what a cell under that column might look like:
+`Food, Delis, Italian, Bakeries, Restaurants`
+ChatGPT
+
+You can achieve this in R by splitting the strings in the column based on the comma separator, then unlisting them to create a vector, and finally obtaining the unique values from that vector. Here's how you can do it using the tidyverse package:
+
+R
+
+library(tidyverse)
+
+# Assuming your tibble is named df and the column with comma-separated attributes is named attributes_column
+unique_attributes <- df %>%
+  mutate(attributes_column = strsplit(attributes_column, ",\\s*")) %>%
+  unnest(attributes_column) %>%
+  distinct(attributes_column)
+
+# Print the unique attributes
+print(unique_attributes)
+
+This code first splits each string in the attributes_column using strsplit, then unnest converts the list column to individual rows, and finally distinct removes duplicates.
+User
+Is there a way to show how many of each attribute appears in the dataframe?
+ChatGPT
+
+Yes, you can count the occurrences of each attribute in the dataframe using the group_by and count functions from the tidyverse package. Here's how you can modify the previous code to achieve that:
+
+R
+
+library(tidyverse)
+
+# Assuming your tibble is named df and the column with comma-separated attributes is named attributes_column
+attribute_counts <- df %>%
+  mutate(attributes_column = strsplit(attributes_column, ",\\s*")) %>%
+  unnest(attributes_column) %>%
+  count(attributes_column)
+
+# Print the attribute counts
+print(attribute_counts)
+
+This code will give you a count of each unique attribute along with the number of times it appears in the dataframe.
+User
+Let's say I have a list of attributes as such:
+`c("Restaurants", "Food", "Bars", "Fast Food")`. 
+
+I want to filter out the rows which don't contain any of these attributes. How do I do that?
+ChatGPT
+
+You can achieve this by using the %in% operator to filter the rows based on whether any of the attributes in your list are present in the attributes_column. Here's how you can do it:
+
+R
+
+library(tidyverse)
+
+# List of attributes to filter
+attributes_to_filter <- c("Restaurants", "Food", "Bars", "Fast Food")
+
+# Assuming your tibble is named df and the column with comma-separated attributes is named attributes_column
+filtered_df <- df %>%
+  filter(any(str_detect(attributes_column, paste(attributes_to_filter, collapse = "|"))))
+
+# Print the filtered dataframe
+print(filtered_df)
+
+In this code:
+
+    str_detect checks if any of the attributes in attributes_to_filter are present in each row of the attributes_column.
+    any checks if any of the attributes are present in each row.
+    filter keeps only the rows where at least one of the attributes is present.
+
+User
+This is not working. To be clear. if we have an attribute with the string value as such:
+`"Doctors, Medical"`
+Then we don't want to include this row in the final filtered tibble. 
+ChatGPT
+
+Got it, if you want to exclude rows where any of the attributes in the attributes_column contain any of the specified attributes, you can use the str_detect function to check if any of the specified attributes are present in each cell. Here's how you can do it:
+
+R
+
+library(tidyverse)
+
+# List of attributes to filter
+attributes_to_filter <- c("Restaurants", "Food", "Bars", "Fast Food")
+
+# Assuming your tibble is named df and the column with comma-separated attributes is named attributes_column
+filtered_df <- df %>%
+  filter(!any(str_detect(attributes_column, paste(attributes_to_filter, collapse = "|"))))
+
+# Print the filtered dataframe
+print(filtered_df)
+
+In this code:
+
+    str_detect checks if any of the attributes in attributes_to_filter are present in each row of the attributes_column.
+    any checks if any of the attributes are present in each row.
+    ! negates the result, so the filter keeps only the rows where none of the specified attributes are present.
+
+User
+That filtered out every restaurant. Try another approach
+ChatGPT
+
+Apologies for the oversight. We can use a loop to iterate over each attribute in the attributes_to_filter list and filter the rows accordingly. Here's how you can do it:
+
+R
+
+library(tidyverse)
+
+# List of attributes to filter
+attributes_to_filter <- c("Restaurants", "Food", "Bars", "Fast Food")
+
+# Assuming your tibble is named df and the column with comma-separated attributes is named attributes_column
+filtered_df <- df
+
+for (attribute in attributes_to_filter) {
+  filtered_df <- filtered_df %>%
+    filter(str_detect(attributes_column, regex(attribute, ignore_case = TRUE)))
+}
+
+# Print the filtered dataframe
+print(filtered_df)
+
+In this code:
+
+    We loop over each attribute in the attributes_to_filter list.
+    For each attribute, we filter the rows where the attributes_column contains that attribute using str_detect.
+    We use regex with ignore_case = TRUE to ensure case-insensitive matching.
+    The resulting dataframe filtered_df will contain only the rows where at least one of the specified attributes is present in the attributes_column.
+
+User
+I have a list of cuisines:
+`cuisines <- c("American (Traditional)", "American (New)", "Mexican", "Italian", "Chinese", "Japanese", "Mediterranean", "Thai", "Vietnamese", "Indian", "Caribbean", "Middle Eastern", "French", "Korean")
+`
+I want to make a new column using mutate which will populate it with the appropriate cuisine if attribute contains one of the strings in `cuisines` vector
+ChatGPT
+
+You can use case_when within mutate to create the new column based on the conditions specified in cuisines. Here's how you can do it:
+
+R
+
+library(tidyverse)
+
+# Define the list of cuisines
+cuisines <- c("American (Traditional)", "American (New)", "Mexican", "Italian", "Chinese", "Japanese", "Mediterranean", "Thai", "Vietnamese", "Indian", "Caribbean", "Middle Eastern", "French", "Korean")
+
+# Assuming your tibble is named df and the column with comma-separated attributes is named attributes_column
+df <- df %>%
+  mutate(cuisine = case_when(
+    str_detect(attributes_column, regex(paste(cuisines, collapse = "|"), ignore_case = TRUE)) ~ 
+      str_extract(attributes_column, regex(paste(cuisines, collapse = "|"), ignore_case = TRUE)),
+    TRUE ~ "Other"
+  ))
+
+# Print the updated dataframe
+print(df)
+
+In this code:
+
+    str_detect is used to check if any of the cuisines from cuisines are present in each row of the attributes_column.
+    str_extract extracts the matched cuisine from the attributes_column.
+    We use regex with ignore_case = TRUE to ensure case-insensitive matching.
+    case_when is used to assign the appropriate cuisine to the new column.
+    If none of the cuisines are matched, "Other" is assigned to the new column.
+
+User
+Seems like the resulting table doesn't include restaurants with attribute `"American (Traditional)"`. Do you know why that is?
+ChatGPT
+
+The issue might be related to the regular expression pattern used for matching cuisines. The problem arises because "American (Traditional)" contains special characters that have meaning in regular expressions. To address this, you need to properly escape those special characters in the regular expression pattern. Here's how you can adjust the code to handle this:
+
+R
+
+library(tidyverse)
+
+# Define the list of cuisines
+cuisines <- c("American (Traditional)", "American (New)", "Mexican", "Italian", "Chinese", "Japanese", "Mediterranean", "Thai", "Vietnamese", "Indian", "Caribbean", "Middle Eastern", "French", "Korean")
+
+# Escape special characters in the cuisines
+cuisines_regex <- gsub("([\\[\\]\\.\\*\\?\\^\\$\\(\\)\\{\\}\\|\\+\\-])", "\\\\\\1", cuisines, perl = TRUE)
+
+# Assuming your tibble is named df and the column with comma-separated attributes is named attributes_column
+df <- df %>%
+  mutate(cuisine = case_when(
+    str_detect(attributes_column, regex(paste(cuisines_regex, collapse = "|"), ignore_case = TRUE)) ~ 
+      str_extract(attributes_column, regex(paste(cuisines_regex, collapse = "|"), ignore_case = TRUE)),
+    TRUE ~ "Other"
+  ))
+
+# Print the updated dataframe
+print(df)
+
+In this code:
+
+    gsub is used to escape special characters in each cuisine name.
+    The resulting list of escaped cuisine names (cuisines_regex) is used in the regular expression pattern for matching.
+    This ensures that special characters in cuisine names are treated as literals in the regular expression pattern, so they are properly matched in the attributes_column.

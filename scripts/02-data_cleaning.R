@@ -1,44 +1,38 @@
 #### Preamble ####
-# Purpose: Cleans the raw plane data recorded by two observers..... [...UPDATE THIS...]
-# Author: Rohan Alexander [...UPDATE THIS...]
-# Date: 6 April 2023 [...UPDATE THIS...]
-# Contact: rohan.alexander@utoronto.ca [...UPDATE THIS...]
+# Purpose: Cleans the raw restaurant review data
+# Author: Moohaeng Sohn
+# Date: 16 April 2024
+# Contact: alex.sohn@mail.utoronto.ca
 # License: MIT
-# Pre-requisites: [...UPDATE THIS...]
-# Any other information needed? [...UPDATE THIS...]
+# Pre-requisites: Must have Yelp datatset (json) downloaded and extracted into data/raw_data folder
 
 #### Workspace setup ####
 library(tidyverse)
+library(jsonlite)
+library(arrow)
 
 #### Clean data ####
-raw_data <- read_csv("inputs/data/plane_data.csv")
+# Load in data
+business <- stream_in(file("./data/raw_data/yelp_academic_dataset_business.json", 'r'))
 
-cleaned_data <-
-  raw_data |>
-  janitor::clean_names() |>
-  select(wing_width_mm, wing_length_mm, flying_time_sec_first_timer) |>
-  filter(wing_width_mm != "caw") |>
-  mutate(
-    flying_time_sec_first_timer = if_else(flying_time_sec_first_timer == "1,35",
-                                   "1.35",
-                                   flying_time_sec_first_timer)
-  ) |>
-  mutate(wing_width_mm = if_else(wing_width_mm == "490",
-                                 "49",
-                                 wing_width_mm)) |>
-  mutate(wing_width_mm = if_else(wing_width_mm == "6",
-                                 "60",
-                                 wing_width_mm)) |>
-  mutate(
-    wing_width_mm = as.numeric(wing_width_mm),
-    wing_length_mm = as.numeric(wing_length_mm),
-    flying_time_sec_first_timer = as.numeric(flying_time_sec_first_timer)
-  ) |>
-  rename(flying_time = flying_time_sec_first_timer,
-         width = wing_width_mm,
-         length = wing_length_mm
-         ) |> 
-  tidyr::drop_na()
+# Filter out non-restaurant businesses
+restaurant_categories <- c("Restaurants", "Bars", "Fast Food")
+
+business <- business |>
+  flatten(recursive = TRUE) |>
+  filter(grepl(paste(restaurant_categories, collapse = "|"), categories)) # turn restaurant categories as regex and match
+
+# Make a new column which indicate what cuisine type this restaurant is
+# This list of cuisine is based on the Yelp dataset's categories 
+cuisines <- c("American", "Mexican", "Italian", "Chinese", "Japanese", "Mediterranean", "Thai", "Vietnamese", "Indian", "Caribbean", "Middle Eastern", "French")
+cuisines_business <- business |>
+  mutate(cuisine = case_when(
+    str_detect(categories, regex(paste(cuisines, collapse = "|"), ignore_case = TRUE)) ~ 
+      str_extract(categories, regex(paste(cuisines, collapse = "|"), ignore_case = TRUE)),
+    TRUE ~ "Other"
+  )) |>
+  select(restaurant_name=name, rating=stars, cuisine, price=attributes.RestaurantsPriceRange2)
 
 #### Save data ####
-write_csv(cleaned_data, "outputs/data/analysis_data.csv")
+write_parquet(cuisines_business, "./data/analysis_data/restaurant_data.parquet")
+

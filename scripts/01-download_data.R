@@ -1,26 +1,19 @@
 #### Preamble ####
-# Purpose: Downloads and saves the data from [...UPDATE THIS...]
-# Author: Rohan Alexander [...UPDATE THIS...]
-# Date: 11 February 2023 [...UPDATE THIS...]
-# Contact: rohan.alexander@utoronto.ca [...UPDATE THIS...]
+# Purpose: Downloads and saves the data from Yelp dataset
+# Author: Moohaeng Sohn
+# Date: 16 April 2024
+# Contact: alex.sohn@mail.utoronto.ca
 # License: MIT
-# Pre-requisites: [...UPDATE THIS...]
-# Any other information needed? [...UPDATE THIS...]
 
+#### Download Data ####
 
-#### Workspace setup ####
-library(opendatatoronto)
-library(tidyverse)
-# [...UPDATE THIS...]
+# Due to the 30 second limit that Yelp gives to its dataset download links,
+# You must download the dataset manually.
 
-#### Download data ####
-# [...ADD CODE HERE TO DOWNLOAD...]
-
-
-
-#### Save data ####
-# [...UPDATE THIS...]
-# change the_raw_data to whatever name you assigned when you downloaded it.
-write_csv(the_raw_data, "inputs/data/raw_data.csv") 
+# Instrucitons (From this repo's README.md):
+# Visit https://www.yelp.com/dataset (Last accessed: 2024 April 15), then click "Download Dataset", 
+# fill out the personal information, and download the JSON (NOT the photos). 
+# Extract and place the files in `data/raw_data` folder (there should be `PLACE_EXTRACTED_YELP_DATASET_HERE` file there). 
+# There will be multiple JSONs, put all of them in `data/raw_data` folder.
 
          

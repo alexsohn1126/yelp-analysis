@@ -1,37 +1,44 @@
 #### Preamble ####
-# Purpose: Models... [...UPDATE THIS...]
-# Author: Rohan Alexander [...UPDATE THIS...]
-# Date: 11 February 2023 [...UPDATE THIS...]
-# Contact: rohan.alexander@utoronto.ca [...UPDATE THIS...]
+# Purpose: Models whether the review is positive based on multiple variables
+# Author: Moohaeng Sohn
+# Date: 16 April 2024
+# Contact: alex.sohn@mail.utoronto.ca
 # License: MIT
-# Pre-requisites: [...UPDATE THIS...]
-# Any other information needed? [...UPDATE THIS...]
+# Pre-requisites: Run 02-data_cleaning.R
 
 
 #### Workspace setup ####
 library(tidyverse)
 library(rstanarm)
+library(arrow)
 
 #### Read data ####
-analysis_data <- read_csv("data/analysis_data/analysis_data.csv")
+restaurants <- read_parquet("./data/analysis_data/restaurant_data.parquet")
 
 ### Model data ####
+# Convert 5-star rating into Good/bad restaurant
+threshold = median(restaurants$rating)
+
+restaurants <- restaurants |>
+  mutate(mostly_positive = case_when(
+    rating <= threshold ~ 0,
+    TRUE ~ 1
+  ))
+
 first_model <-
   stan_glm(
-    formula = flying_time ~ length + width,
-    data = analysis_data,
-    family = gaussian(),
+    formula = mostly_positive ~ cuisine + price,
+    data = restaurants,
+    family = binomial(link="logit"),
     prior = normal(location = 0, scale = 2.5, autoscale = TRUE),
     prior_intercept = normal(location = 0, scale = 2.5, autoscale = TRUE),
-    prior_aux = exponential(rate = 1, autoscale = TRUE),
     seed = 853
   )
-
 
 #### Save model ####
 saveRDS(
   first_model,
-  file = "models/first_model.rds"
+  file = "models/restaurant_rating_model_logit2.rds"
 )
 
 

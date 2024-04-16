@@ -1,10 +1,8 @@
 ---
-title: "My title"
-subtitle: "My subtitle if needed"
+title: "Cuisine and Yelp Ratings"
 author: 
-  - First author
-  - Another author
-thanks: "Code and data are available at: LINK."
+  - Moohaeng Sohn
+thanks: "Code and data are available at: [https://github.com/alexsohn1126/yelp-analysis](https://github.com/alexsohn1126/yelp-analysis)"
 date: today
 date-format: long
 abstract: "First sentence. Second sentence. Third sentence. Fourth sentence."
@@ -19,34 +17,38 @@ bibliography: references.bib
 #| message: false
 
 library(tidyverse)
-library(palmerpenguins)
+library(modelsummary)
+library(arrow)
+library(kableExtra)
+library(here)
+restaurants <- read_parquet(here("./data/analysis_data/restaurant_data.parquet"))
+model <- readRDS(here("./models/restaurant_rating_model_logit.rds"))
 ```
 
 
 # Introduction
 
-You can and should cross-reference sections and sub-sections. We use @citeR and @rohan.
+Thanks to internet technology, we can get hundreds, if not thousands of reviews of restaurants around us. This means we can choose which restaurants we will go to based on those reviews. Therefore, keeping a high review rating is very important for a restaurant's long-term success.
 
-The remainder of this paper is structured as follows. @sec-data....
+Yelp is a website where people can post reviews about local businesses, containing 287 million reviews [@yelpfacts]. Yelp's reviews are based on the 5-star system. Users can choose between one to five stars to put on their review. These reviews are collected and averaged, which becomes the rating for the establishment. We will use a dataset from Yelp which we will dive into in @sec-data.
 
+TODO: ADD THINGS ABOUT WHAT WE FOUND OUT AND WHY IS IT IMPORTANT
 
+In this paper, our estimand of interest is how different factors such as the cuisine of the restaurant, or the price of the menu items in the restaurants affect the rating of a restaurant. We will first explore the dataset in @sec-data, and discuss the model the relationship between aforementioned variables using logistic regression in #sec-model. Then we will look at the results in @sec-res, finally discussing about these results in @sec-discussion.
 
 # Data {#sec-data}
 
-Some of our data is of penguins (@fig-bills), from @palmerpenguins.
+The restaurant review dataset we will use is from Yelp. Yelp offers an academic dataset for the public to use, although it is a small subset of their massive database [@yelpdataset-faq]. It only contains 
 
 ```{r}
 #| label: fig-bills
 #| fig-cap: Bills of penguins
 #| echo: false
 
-ggplot(penguins, aes(x = island, fill = species)) +
-  geom_bar(alpha = 0.8) +
-  scale_fill_manual(values = c("darkorange","purple","cyan4"),
-                    guide = "none") +
-  theme_minimal() +
-  facet_wrap(~species, ncol = 1) +
-  coord_flip()
+modelsummary(list("my model" = model))
+
+modelplot(model, conf_level = 0.9) +
+  labs(x = "90 per cent credibility interval")
 ```
 
 Talk more about it.
@@ -74,7 +76,7 @@ Talk way more about it.
 
 
 
-# Model
+# Model {#sec-model}
 
 The goal of our modelling strategy is twofold. Firstly,...
 
@@ -103,7 +105,7 @@ We expect a positive relationship between the size of the wings and time spent a
 We can use maths by including latex between dollar signs, for instance $\theta$.
 
 
-# Results
+# Results {#sec-res}
 
 Our results are summarized in @tbl-modelresults.
 
@@ -138,7 +140,7 @@ modelsummary::modelsummary(
 
 
 
-# Discussion
+# Discussion {#sec-discussion}
 
 ## First discussion point {#sec-first-point}
 

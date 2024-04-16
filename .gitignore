@@ -44,3 +44,8 @@ vignettes/*.pdf
 
 # R Environment Variables
 .Renviron
+
+# Raw data files (too big to be added to github)
+data/raw_data/*.json
+data/raw_data/*.pdf
+

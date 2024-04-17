@@ -8,6 +8,7 @@ date-format: long
 abstract: "First sentence. Second sentence. Third sentence. Fourth sentence."
 format: pdf
 number-sections: true
+toc: true
 bibliography: references.bib
 ---
 
@@ -21,6 +22,7 @@ library(modelsummary)
 library(arrow)
 library(kableExtra)
 library(here)
+library(rstanarm)
 restaurants <- read_parquet(here("./data/analysis_data/restaurant_data.parquet"))
 model <- readRDS(here("./models/restaurant_rating_model_logit.rds"))
 ```
@@ -34,45 +36,129 @@ Yelp is a website where people can post reviews about local businesses, containi
 
 TODO: ADD THINGS ABOUT WHAT WE FOUND OUT AND WHY IS IT IMPORTANT
 
-In this paper, our estimand of interest is how different factors such as the cuisine of the restaurant, or the price of the menu items in the restaurants affect the rating of a restaurant. We will first explore the dataset in @sec-data, and discuss the model the relationship between aforementioned variables using logistic regression in #sec-model. Then we will look at the results in @sec-res, finally discussing about these results in @sec-discussion.
+In this paper, our estimand of interest is how different factors such as the cuisine of the restaurant, or the price of the menu items in the restaurants affect the rating of a restaurant. We will first explore the dataset in @sec-data, and discuss the model the relationship between aforementioned variables using logistic regression in @sec-model. Then we will look at the results in @sec-res, finally discussing about these results in @sec-discussion.
+
+We used the programming language R [@citeR], along with packages `tidyverse` [@tidyverse], `rstanarm` [@rstanarm], `jsonlite` [@jsonlite], `arrow` [@arrow], `modelsummary` [@modelsummary], `kableExtra` [@kableExtra], `here` [@here].
 
 # Data {#sec-data}
 
-The restaurant review dataset we will use is from Yelp. Yelp offers an academic dataset for the public to use, although it is a small subset of their massive database [@yelpdataset-faq]. It only contains 
+The restaurant review dataset we will use is from Yelp. Yelp offers an academic dataset for the public to use, although it is a small subset of their massive database [@yelpdataset-faq]. The dataset is split between multiple JSON files, but we will only focus on businesses JSON. The raw businesses dataset contains 150,346 businesses. These businesses are from metropolitan areas in United States and Canada. Specifically, from metropolitan areas near Montreal, Calgary, Toronto, Pittsburgh, Charlotte, Urbana-Champaign, Phoenix, Las Vegas, Madison, and Cleveland [@yelpdataset-faq].
+
+Another possible source of restaurant reviews could have been from Google reviews of restaurants, but that requires us to use Google Business Profile APIs, which cost money. There is always an option to perform webscraping, but this is a gray area legally, and may be computationally expensive. There are other review websites such as TripAdvisor, but they do not seem to have a dataset open to the public like Yelp does.
+
+The dataset contains multiple variables such as the name of the business, the location of the business, and things such as amenities on site. We have filtered through the raw dataset to only contain restaurants. There were a total of 47,231 restaurants in the final dataset. We will focus on the star rating, categories, and price range of the menu in the restaurant. 
+
+## Star Rating
+
+Star rating is the average star rating of a restaurant. One odd thing about the star rating given in the dataset is that it is rounded to the nearest star or half of a star. So all possible values of star ratings are: 1.0, 1.5, 2.0, and so on until 5.0. Notice that the minimum star rating is one and the maximum star rating is five. This is because the minimum star rating that someone can give a restaurant is 1 stars, and the maximum star rating is 5 stars. While the average star rating can have 0.5 star increments, users' reviews can only give ratings in 1 star increments. For example, no 4.5 stars can be given in a review. Each user can rate a business only once, though they are free to change their rating later, one user cannot post multiple reviews about a restaurant. This limits the power each user has to change the rating of a business.
+
+Yelp has removed businesses that had 3 or less reviews posted that were older than 14 days at the date of collection in the dataset [@yelpdataset-faq]. This means restaurants that just opened, or didn't have enough reviews at the time of data collection would not have been included in this dataset. 
+
+@Fig-star-rating-distribution shows us that 4.0 is the most common star rating of restaurants. This distribution is left skewed, as we can see the rating gradually increases from 1.0 to 4.0, then quickly drops off from 4.0 to 5.0. We can infer from this that most people consider somewhere around 4-stars an average dining experience. 
+
+```{r}
+#| label: fig-star-rating-distribution
+#| fig-cap: Distribution of Star Ratings
+#| echo: false
+
+restaurants %>%
+  ggplot(aes(x = rating)) +
+  geom_histogram(binwidth = 0.25, fill = "grey", color = "black") +
+  labs(title = "Distribution of Star Ratings",
+       x = "Stars",
+       y = "Frequency") +
+  theme_minimal()
+```
+
+```{r}
+#| label: tbl-star-rating-summary
+#| tbl-cap: "Summary Statistics of Star Ratings"
+#| echo: false
+
+summary_stats <- restaurants %>%
+  summarize(
+    Count = n(),
+    Mean = mean(rating),
+    Median = median(rating),
+    SD = sd(rating),
+    Minimum = min(rating),
+    Maximum = max(rating)
+  )
+
+# Create a table using kable
+summary_table <- kable(summary_stats)
+
+summary_table
+```
+
+## Categories (Cuisine)
+
+Categories for a restaurant describes what kind of business it is. These categories are chosen manually by the business owners [@yelpcategory]. Because Yelp is a business review platform, we have decided to filter out non-restaurant businesses from our final dataset. This meant any restaurants which didn't include one of the categories: "Restaurants", "Food", "Fast Food" would not be included in the final dataset. After filtering out non-restaurants, we have chosen top 12 cuisines to categorize each restaurant into. The restaurants that did not have these cuisines in their categories were put into "Other" category. This is why we have named this section also cuisine, as we will focus on cuisine categories of restaurants.
+
+```{r}
+#| label: tbl-category-summary
+#| tbl-cap: "Numbers of Restaurants Per Cuisine"
+#| echo: false
+
+# Calculate the count of restaurants per category
+restaurant_summary <- restaurants %>%
+  group_by(cuisine) %>%
+  summarize(restaurants_count = n()) %>%
+  ungroup()
+
+# Calculate the percentage of restaurants per category
+total_restaurants <- nrow(restaurants)
+restaurant_summary <- restaurant_summary %>%
+  mutate(percentage = round((restaurants_count / total_restaurants) * 100, 2))
+
+# Arrange the result by frequency in descending order
+restaurant_summary <- restaurant_summary %>%
+  arrange(desc(restaurants_count))
+
+# Rename the columns
+colnames(restaurant_summary) <- c("Cuisine", "Number of Restaurants", "Percentage (%)")
+
+# Print table
+kable(restaurant_summary)
+```
+
+## Price Range
+
+
 
 ```{r}
 #| label: fig-bills
 #| fig-cap: Bills of penguins
 #| echo: false
-
-modelsummary(list("my model" = model))
-
-modelplot(model, conf_level = 0.9) +
-  labs(x = "90 per cent credibility interval")
-```
-
-Talk more about it.
-
-And also planes (@fig-planes). (You can change the height and width, but don't worry about doing that until you have finished every other aspect of the paper - Quarto will try to make it look nice and the defaults usually work well once you have enough text.)
-
-```{r}
-#| label: fig-planes
-#| fig-cap: Relationship between wing length and width
-#| echo: false
 #| warning: false
 #| message: false
 
-analysis_data <- read_csv(here::here("data/analysis_data/analysis_data.csv"))
+data_counts <- restaurants %>%
+  group_by(cuisine, price) %>%
+  summarize(count = n()) %>%
+  ungroup()
 
-analysis_data |> 
-  ggplot(aes(x = width, y = length)) +
-  geom_point(alpha = 0.8) +
+# Calculate the total count of each cuisine category
+cuisine_total_counts <- data_counts %>%
+  group_by(cuisine) %>%
+  summarize(total_count = sum(count))
+
+# Merge the counts with the total counts
+data_normalized <- data_counts %>%
+  left_join(cuisine_total_counts, by = "cuisine") %>%
+  mutate(normalized_count = count / total_count)
+
+# Plot the relationship between cuisine and price range with normalized counts
+data_normalized %>%
+  ggplot(aes(x = cuisine, y = normalized_count, fill = factor(price))) +
+  geom_bar(stat = "identity") +
+  labs(title = "Relationship between Cuisine and Price Range (Normalized)",
+       x = "Cuisine",
+       y = "Percentage",
+       fill = "Price Range") +
   theme_minimal() +
-  labs(x = "Wing width (mm)",
-       y = "Wing length (mm)")
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
 ```
-
-Talk way more about it. 
 
 
 
@@ -115,10 +201,7 @@ Our results are summarized in @tbl-modelresults.
 #| warning: false
 #| message: false
 
-library(rstanarm)
 
-first_model <-
-  readRDS(file = here::here("models/first_model.rds"))
 ```
 
 ```{r}
@@ -128,13 +211,6 @@ first_model <-
 #| tbl-cap: "Explanatory models of flight time based on wing width and wing length"
 #| warning: false
 
-modelsummary::modelsummary(
-  list(
-    "First model" = first_model
-  ),
-  statistic = "mad",
-  fmt = 2
-)
 ```
 
 
@@ -181,15 +257,6 @@ In @fig-ppcheckandposteriorvsprior-2 we compare the posterior with the prior. Th
 #| fig-cap: "Examining how the model fits, and is affected by, the data"
 #| fig-subcap: ["Posterior prediction check", "Comparing the posterior with the prior"]
 
-pp_check(first_model) +
-  theme_classic() +
-  theme(legend.position = "bottom")
-
-posterior_vs_prior(first_model) +
-  theme_minimal() +
-  scale_color_brewer(palette = "Set1") +
-  theme(legend.position = "bottom") +
-  coord_flip()
 ```
 
 ## Diagnostics
@@ -208,9 +275,6 @@ posterior_vs_prior(first_model) +
 #| fig-subcap: ["Trace plot", "Rhat plot"]
 #| layout-ncol: 2
 
-plot(first_model, "trace")
-
-plot(first_model, "rhat")
 ```
 
 

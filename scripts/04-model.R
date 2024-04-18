@@ -13,32 +13,29 @@ library(rstanarm)
 library(arrow)
 
 #### Read data ####
-restaurants <- read_parquet("./data/analysis_data/restaurant_data.parquet")
+data <- read_parquet("./data/analysis_data/restaurant_data.parquet")
 
 ### Model data ####
-# Convert 5-star rating into Good/bad restaurant
-threshold = median(restaurants$rating)
 
-restaurants <- restaurants |>
-  mutate(mostly_positive = case_when(
-    rating <= threshold ~ 0,
-    TRUE ~ 1
-  ))
+# Rough model
+# Don't import the whole MASS library as it interferes with select() from tidyverse
+#rough_model <-
+#  MASS::polr(factor(rating) ~ cuisine + factor(price), data = data)
 
-first_model <-
-  stan_glm(
-    formula = mostly_positive ~ cuisine + price,
-    data = restaurants,
-    family = binomial(link="logit"),
-    prior = normal(location = 0, scale = 2.5, autoscale = TRUE),
-    prior_intercept = normal(location = 0, scale = 2.5, autoscale = TRUE),
-    seed = 853
+# uses 6 cores, reduce if necessary
+model <-
+  stan_polr(
+    formula = factor(rating) ~ cuisine + factor(price),
+    cores = 6,
+    data = data,
+    prior = R2(0.3, "mean"),
+    seed = 302
   )
 
 #### Save model ####
 saveRDS(
-  first_model,
-  file = "models/restaurant_rating_model_logit2.rds"
+  model,
+  file = "models/restaurant_rating_model_ord_logit.rds"
 )
 
 

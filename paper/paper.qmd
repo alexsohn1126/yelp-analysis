@@ -23,10 +23,9 @@ library(arrow)
 library(kableExtra)
 library(here)
 library(rstanarm)
-restaurants <- read_parquet(here("./data/analysis_data/restaurant_data.parquet"))
-model <- readRDS(here("./models/restaurant_rating_model_logit.rds"))
+data <- read_parquet(here("./data/analysis_data/restaurant_data.parquet"))
+model <- readRDS(here("./models/restaurant_rating_model_ord_logit.rds"))
 ```
-
 
 # Introduction
 
@@ -46,22 +45,22 @@ The restaurant review dataset we will use is from Yelp. Yelp offers an academic 
 
 Another possible source of restaurant reviews could have been from Google reviews of restaurants, but that requires us to use Google Business Profile APIs, which cost money. There is always an option to perform webscraping, but this is a gray area legally, and may be computationally expensive. There are other review websites such as TripAdvisor, but they do not seem to have a dataset open to the public like Yelp does.
 
-The dataset contains multiple variables such as the name of the business, the location of the business, and things such as amenities on site. We have filtered through the raw dataset to only contain restaurants. There were a total of 47,231 restaurants in the final dataset. We will focus on the star rating, categories, and price range of the menu in the restaurant. 
+The dataset contains multiple variables such as the name of the business, the location of the business, and things such as amenities on site. We have filtered through the raw dataset to only contain restaurants. There were a total of 47,213 restaurants in the final dataset. We will focus on the star rating, categories, and price range of the menu in the restaurant.
 
 ## Star Rating
 
-Star rating is the average star rating of a restaurant. One odd thing about the star rating given in the dataset is that it is rounded to the nearest star or half of a star. So all possible values of star ratings are: 1.0, 1.5, 2.0, and so on until 5.0. Notice that the minimum star rating is one and the maximum star rating is five. This is because the minimum star rating that someone can give a restaurant is 1 stars, and the maximum star rating is 5 stars. While the average star rating can have 0.5 star increments, users' reviews can only give ratings in 1 star increments. For example, no 4.5 stars can be given in a review. Each user can rate a business only once, though they are free to change their rating later, one user cannot post multiple reviews about a restaurant. This limits the power each user has to change the rating of a business.
+Star rating is the average star rating of a restaurant. One odd thing about the star rating given in the dataset is that it is rounded to the nearest star or half of a star. So all possible values of star ratings are: 1.0, 1.5, 2.0, and so on until 5.0.
 
-Yelp has removed businesses that had 3 or less reviews posted that were older than 14 days at the date of collection in the dataset [@yelpdataset-faq]. This means restaurants that just opened, or didn't have enough reviews at the time of data collection would not have been included in this dataset. 
+@Fig-star-rating-distribution shows us that 4.0 is the most common star rating of restaurants. This distribution is left skewed, as we can see the rating gradually increases from 1.0 to 4.0, then quickly drops off from 4.0 to 5.0. We can infer from this that most people consider somewhere around 4-stars an average dining experience.
 
-@Fig-star-rating-distribution shows us that 4.0 is the most common star rating of restaurants. This distribution is left skewed, as we can see the rating gradually increases from 1.0 to 4.0, then quickly drops off from 4.0 to 5.0. We can infer from this that most people consider somewhere around 4-stars an average dining experience. 
+@Tbl-star-rating-summary shows the summary statistics of star ratings, and we can see that as we explained, that the minimum is 1.0 and the maximum is 5.0. The standard deviation isn't that big, which is to be expected because most of the restaurants lie between 3.5 to 4.5 rating range.
 
 ```{r}
 #| label: fig-star-rating-distribution
 #| fig-cap: Distribution of Star Ratings
 #| echo: false
 
-restaurants %>%
+data %>%
   ggplot(aes(x = rating)) +
   geom_histogram(binwidth = 0.25, fill = "grey", color = "black") +
   labs(title = "Distribution of Star Ratings",
@@ -75,7 +74,7 @@ restaurants %>%
 #| tbl-cap: "Summary Statistics of Star Ratings"
 #| echo: false
 
-summary_stats <- restaurants %>%
+summary_stats <- data %>%
   summarize(
     Count = n(),
     Mean = mean(rating),
@@ -95,19 +94,21 @@ summary_table
 
 Categories for a restaurant describes what kind of business it is. These categories are chosen manually by the business owners [@yelpcategory]. Because Yelp is a business review platform, we have decided to filter out non-restaurant businesses from our final dataset. This meant any restaurants which didn't include one of the categories: "Restaurants", "Food", "Fast Food" would not be included in the final dataset. After filtering out non-restaurants, we have chosen top 12 cuisines to categorize each restaurant into. The restaurants that did not have these cuisines in their categories were put into "Other" category. This is why we have named this section also cuisine, as we will focus on cuisine categories of restaurants.
 
+@Tbl-category-summary shows us what types of cuisines we have selected, and the number of restaurants with that cuisine in their category. We can see nearly half of the restaurants are categorized as "Other". The next largest cuisine in our dataset is American. This may be due to the fact that all the restaurants in the dataset are from United States and Canada.
+
 ```{r}
 #| label: tbl-category-summary
 #| tbl-cap: "Numbers of Restaurants Per Cuisine"
 #| echo: false
 
 # Calculate the count of restaurants per category
-restaurant_summary <- restaurants %>%
+restaurant_summary <- data %>%
   group_by(cuisine) %>%
   summarize(restaurants_count = n()) %>%
   ungroup()
 
 # Calculate the percentage of restaurants per category
-total_restaurants <- nrow(restaurants)
+total_restaurants <- nrow(data)
 restaurant_summary <- restaurant_summary %>%
   mutate(percentage = round((restaurants_count / total_restaurants) * 100, 2))
 
@@ -124,7 +125,111 @@ kable(restaurant_summary)
 
 ## Price Range
 
+The price range is given as an integer from 1 to 4, inclusive. This is supposed to indicate how expensive the restaurant is per person. 1 being more affordable, and 4 being more expensive. There were restaurants with no price ranges, and those were discarded from the cleaned dataset. On Yelp's website, these price ranges are shown as number of dollar signs equal to the price range. For example, Yelp would show one dollar sign if price range is 1.
 
+@Tbl-price-range-summary shows that the over 95% of the restaurants have price range of 1 or 2. About 95.81% of restaurants in the database are in price range 1 or 2. Only 3.73% of the restaurants are in price range 3, and even less, 0.46% of the restaurants are in price range 4.
+
+```{r}
+#| label: tbl-price-range-summary
+#| tbl-cap: "Numbers of Restaurants Per Price Range"
+#| echo: false
+
+# Calculate the count of restaurants per category
+restaurant_summary <- data %>%
+  group_by(price) %>%
+  summarize(restaurants_count = n()) %>%
+  ungroup()
+
+# Calculate the percentage of restaurants per category
+total_restaurants <- nrow(data)
+restaurant_summary <- restaurant_summary %>%
+  mutate(percentage = round((restaurants_count / total_restaurants) * 100, 2))
+
+# Arrange the result by frequency in descending order
+restaurant_summary <- restaurant_summary %>%
+  arrange(price)
+
+# Rename the columns
+colnames(restaurant_summary) <- c("Price Range", "Number of Restaurants", "Percentage (%)")
+
+# Print table
+kable(restaurant_summary)
+```
+
+## Measurement
+
+For star ratings, the minimum star rating is one and the maximum star rating is five. This is because the minimum star rating that someone can give a restaurant is 1 stars, and the maximum star rating is 5 stars. While the average star rating can have 0.5 star increments, users' reviews can only give ratings in 1 star increments. For example, no 4.5 stars can be given in a review. Each user can rate a business only once, though they are free to change their rating later, one user cannot post multiple reviews about a restaurant. This limits the power each user has to change the rating of a business.
+
+As mentioned above, categories for a restaurant is not given automatically, rather given by the business owners. This means it can be a bit inaccurate when it comes to what exact cuisine that a restaurant serves. Another way the cuisines can be inaccurate is when a restaurant serves foods from multiple cuisines. This makes it complicated to categorize them exactly into each cuisine.
+
+The exact method of how the price range was decided by Yelp is not known. We can make guesses about what kind of information they use to determine the price range, but no clear documentation is available for the price range statistics. We were able to find online discussions about the price range being decided by the check-in feature of Yelp, possibly implying that there are certain price ranges that Yelp uses to display these price ranges [@yelppricedef].
+
+# Model {#sec-model}
+
+We are trying to model the rating $y$, and as we have discussed in the data section, there are only 9 possible outcomes. From 1.0, to 5.0, in increments of 0.5. Therefore we will use ordinal logistic regression. If we assume that the observed rating $y$ is from a continuous variable $y^*$, then we can say that:
+
+$$
+y = \begin{cases}
+1.0 & \text{ if } y^* \leq c_{1.0|1.5} \\
+1.5 & \text{ if } y^* \in (c_{1.0|1.5}, c_{1.5|2.0}) \\
+\vdots & \\
+4.5 & \text{ if } y^* \in (c_{4.0|4.5}, c_{4.5|5.0}) \\
+5.0 & \text{ if } y^* \geq c_{4.5|5.0}
+\end{cases}
+$$
+
+Where $c_{n_1|n_2}$ represents the cutoff between $n_1$ rating and $n_2$ rating. The above notations are borrowed from @regandothers \[p.276\] and @evalLLM [p.12].
+
+We will use a Bayesian framework to make our model. To do this, we use `rstanarm` [@rstanarm] R package. Background details and diagnostics are included in [Appendix -@sec-model-details].
+
+## Model set-up
+
+We will model the final discrete rating $y$ by a continuous variable $y^*$. Because we are doing ordinal logistic regression, $y^*$ will have a logistic distribution.
+
+$$
+y^* = \beta_1 \cdot \text{cuisine}_i + \beta_2 \cdot \text{price}_i
+$$
+
+We use the R2 prior, because `rstanarm` requires us to do this for this computational process, with the mean set as 0.3 as suggested by @regandothers [p.276]. R2 uses the prior beliefs about the location about $R^2$, which is "the proportion of variance in the outcome attributable to the predictors" @rstanarm. We use default priors from `rstanarm` for the cut points ($c_{n_1|n_2}$), which is a dirichlet distribution with concentration of 1.
+
+### Model justification
+
+We can expect that if a restaurant has higher prices, then the restaurant will be higher quality. This should be reflected in the ratings by the customers, and those restaurants with higher quality will have higher ratings. However, one could set much higher expectations for more expensive restaurants, effectively cancelling out the higher quality food and service that is expected from a higher priced restaurant. We will keep this in mind when we discuss our results.
+
+We also expect that different cuisines will have different ratings. This dataset is exclusively about restaurants in North America. Therefore we may expect that reviewers are more likely to be from North America, so perhaps they would give a higher rating to a restaurant that serves western cuisine, such as Italian, or American.
+
+# Results {#sec-res}
+
+Our results are summarized in @tbl-modelresults, and @fig-modelresults.
+
+The rows with numbers and a vertical line between them are the cutpoints. For example, a rating would be considered 1.5 if we had a $y^*$ that is greater than $1.0|1.5$ and less than $1.5|2.0$.
+
+We can see that nearly all cuisines has a positive effect on the rating, except for Chinese.
+
+```{r}
+#| echo: false
+#| eval: true
+#| label: tbl-modelresults
+#| tbl-cap: "Explanatory models of flight time based on wing width and wing length"
+#| warning: false
+
+#modelsummary(list("my model" = model))
+```
+
+```{r}
+#| echo: false
+#| eval: true
+#| label: fig-modelresults
+#| fig-cap: "Explanatory models of flight time based on wing width and wing length"
+#| warning: false
+
+#modelplot(model, conf_level = 0.9) +
+ # labs(x = "90% credibility interval")
+```
+
+# Discussion {#sec-discussion}
+
+## First discussion point {#sec-first-point}
 
 ```{r}
 #| label: fig-bills
@@ -133,7 +238,7 @@ kable(restaurant_summary)
 #| warning: false
 #| message: false
 
-data_counts <- restaurants %>%
+data_counts <- data %>%
   group_by(cuisine, price) %>%
   summarize(count = n()) %>%
   ungroup()
@@ -160,67 +265,7 @@ data_normalized %>%
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 ```
 
-
-
-# Model {#sec-model}
-
-The goal of our modelling strategy is twofold. Firstly,...
-
-Here we briefly describe the Bayesian analysis model used to investigate... Background details and diagnostics are included in [Appendix -@sec-model-details].
-
-## Model set-up
-
-Define $y_i$ as the number of seconds that the plane remained aloft. Then $\beta_i$ is the wing width and $\gamma_i$ is the wing length, both measured in millimeters.  
-
-\begin{align} 
-y_i|\mu_i, \sigma &\sim \mbox{Normal}(\mu_i, \sigma) \\
-\mu_i &= \alpha + \beta_i + \gamma_i\\
-\alpha &\sim \mbox{Normal}(0, 2.5) \\
-\beta &\sim \mbox{Normal}(0, 2.5) \\
-\gamma &\sim \mbox{Normal}(0, 2.5) \\
-\sigma &\sim \mbox{Exponential}(1)
-\end{align}
-
-We run the model in R [@citeR] using the `rstanarm` package of @rstanarm. We use the default priors from `rstanarm`.
-
-
-### Model justification
-
-We expect a positive relationship between the size of the wings and time spent aloft. In particular...
-
-We can use maths by including latex between dollar signs, for instance $\theta$.
-
-
-# Results {#sec-res}
-
-Our results are summarized in @tbl-modelresults.
-
-```{r}
-#| echo: false
-#| eval: true
-#| warning: false
-#| message: false
-
-
-```
-
-```{r}
-#| echo: false
-#| eval: true
-#| label: tbl-modelresults
-#| tbl-cap: "Explanatory models of flight time based on wing width and wing length"
-#| warning: false
-
-```
-
-
-
-
-# Discussion {#sec-discussion}
-
-## First discussion point {#sec-first-point}
-
-If my paper were 10 pages, then should be be at least 2.5 pages. The discussion is a chance to show off what you know and what you learnt from all this. 
+If my paper were 10 pages, then should be be at least 2.5 pages. The discussion is a chance to show off what you know and what you learnt from all this.
 
 ## Second discussion point
 
@@ -234,54 +279,84 @@ Weaknesses and next steps should also be included.
 
 \appendix
 
-# Appendix {-}
-
-
-# Additional data details
+# Appendix {.unnumbered}
 
 # Model details {#sec-model-details}
 
 ## Posterior predictive check
 
-In @fig-ppcheckandposteriorvsprior-1 we implement a posterior predictive check. This shows...
+In @fig-ppcheckandposteriorvsprior-1 we implement a posterior predictive check. This shows that the there is a large disparity between the predictions and the actual data.
 
-In @fig-ppcheckandposteriorvsprior-2 we compare the posterior with the prior. This shows... 
+In @fig-ppcheckandposteriorvsprior-2 we compare the posterior with the prior. This shows the posteriors are around where the credible intervals are in priors.
 
 ```{r}
 #| eval: true
 #| echo: false
 #| message: false
 #| warning: false
-#| label: fig-ppcheckandposteriorvsprior
-#| layout-ncol: 2
-#| fig-cap: "Examining how the model fits, and is affected by, the data"
-#| fig-subcap: ["Posterior prediction check", "Comparing the posterior with the prior"]
+#| label: fig-ppcheckandposteriorvsprior-1
+#| fig-height: 7
+#| fig-cap: "Examining how the model fits, and is affected by the data - Posterior prediction check"
 
+pp_plot <- pp_check(model) +
+  theme_classic() +
+  theme(legend.position = "bottom")
+pp_plot
+
+```
+
+```{r}
+#| eval: true
+#| echo: false
+#| message: false
+#| warning: false
+#| label: fig-ppcheckandposteriorvsprior-2
+#| fig-height: 7
+#| fig-cap: "Examining how the model fits, and is affected by the data - Comparing the posterior with the prior"
+
+pvpplot <- posterior_vs_prior(model) +
+  theme_minimal() +
+  theme(legend.position = "bottom") +
+  coord_flip()
+
+pvpplot
 ```
 
 ## Diagnostics
 
-@fig-stanareyouokay-1 is a trace plot. It shows... This suggests...
+@fig-stanareyouokay-1 is a trace plot. It shows the chains cover a constant amount of region. This suggests that a large amount of sample is chosen at around the target space we want to explore.
 
-@fig-stanareyouokay-2 is a Rhat plot. It shows... This suggests...
+@fig-stanareyouokay-2 is a Rhat plot. It shows all of the Rhat values are very close to 1, meaning the chains had enough time to converge.
 
 ```{r}
 #| echo: false
 #| eval: true
 #| message: false
 #| warning: false
-#| label: fig-stanareyouokay
-#| fig-cap: "Checking the convergence of the MCMC algorithm"
-#| fig-subcap: ["Trace plot", "Rhat plot"]
-#| layout-ncol: 2
+#| label: fig-stanareyouokay-1
+#| fig-height: 7
+#| fig-cap: "Checking the convergence of the MCMC algorithm - Trace Plot"
+
+plot(model, "trace") +
+    theme(legend.position = "bottom")
 
 ```
 
+```{r}
+#| echo: false
+#| eval: true
+#| message: false
+#| warning: false
+#| label: fig-stanareyouokay-2
+#| fig-height: 7
+#| fig-cap: "Checking the convergence of the MCMC algorithm - Rhat Plot"
 
+plot(model, "rhat") +
+  theme_minimal() +
+  theme(legend.position = "bottom")
+
+```
 
 \newpage
 
-
 # References
-
-

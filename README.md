@@ -18,7 +18,7 @@ The repo is structured as:
 
 ## Statement on LLM usage
 
-LLM such as ChatGPT was used to assist writing scripts. Further details on the usage is documented in `other/llm/usage.txt`.
+LLM such as ChatGPT was used to assist writing scripts. Further details on the usage is documented in `other/llm/usage.txt`. No other LLM usage was made.
 
 ## Downloading dataset
 

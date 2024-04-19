@@ -1,5 +1,5 @@
 ---
-title: "Modelling the Yelp Rating of Restaurants: Disparity of Rating Between Restaurant Cuisines and Prices"
+title: "Modelling the Yelp Rating of Restaurants: Disparity of Rating Between Different Restaurant Cuisines and Prices"
 author: 
   - Moohaeng Sohn
 thanks: "Code and data are available at: [https://github.com/alexsohn1126/yelp-analysis](https://github.com/alexsohn1126/yelp-analysis)"

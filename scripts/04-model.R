@@ -19,7 +19,7 @@ data <- read_parquet("./data/analysis_data/restaurant_data.parquet")
 
 # Rough model
 # Don't import the whole MASS library as it interferes with select() from tidyverse
-#rough_model <-
+# rough_model <-
 #  MASS::polr(factor(rating) ~ cuisine + factor(price), data = data)
 
 # uses 6 cores, reduce if necessary
@@ -37,5 +37,3 @@ saveRDS(
   model,
   file = "models/restaurant_rating_model_ord_logit.rds"
 )
-
-

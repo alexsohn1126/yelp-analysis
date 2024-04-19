@@ -17,7 +17,7 @@ set.seed(302)
 num_restaurants <- 10
 
 restaurants <- tibble(
-  # restaurant names will be "Restaurant 1", "Restaurant 2" and so on... 
+  # restaurant names will be "Restaurant 1", "Restaurant 2" and so on...
   restaurant_name = paste("Restaurant", seq(1:num_restaurants)),
   # Generating random float ratings between 1 and 5
   rating = runif(num_restaurants, min = 1, max = 5),
@@ -29,7 +29,7 @@ restaurants <- tibble(
 
 # Test column types
 is.character(restaurants$restaurant_name)
-is.numeric(restaurants$rating) 
+is.numeric(restaurants$rating)
 is.character(restaurants$cuisine)
 
 # Test rating bounds

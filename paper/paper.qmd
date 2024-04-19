@@ -37,7 +37,7 @@ In this paper, our estimand of interest is how different factors such as the cui
 
 We found out that higher the price of a restaurant, more likely it will have a higher rating, though with a couple of exceptions. And certain cuisines performed significantly worse than other cuisines. We discuss why that may be the case using graphs and tables in @sec-discussion. This study may be important to entrepreneurs whom may be interested in how these reviews may possibly be biased due to the cuisine and the price of a restaurant.
 
-We used the programming language R [@citeR], along with packages `tidyverse` [@tidyverse], `rstanarm` [@rstanarm], `jsonlite` [@jsonlite], `arrow` [@arrow], `modelsummary` [@modelsummary], `kableExtra` [@kableExtra], `here` [@here], `leaflet` [@leaflet], `htmlwidgets` [@htmlwidgets].
+We used the programming language R [@citeR], along with packages `tidyverse` [@tidyverse], `rstanarm` [@rstanarm], `jsonlite` [@jsonlite], `arrow` [@arrow], `modelsummary` [@modelsummary], `kableExtra` [@kableExtra], `here` [@here], `leaflet` [@leaflet], `htmlwidgets` [@htmlwidgets], and `styler` [@styler].
 
 # Data {#sec-data}
 
@@ -65,9 +65,11 @@ Star rating is the average star rating of a restaurant. One odd thing about the 
 data |>
   ggplot(aes(x = rating)) +
   geom_histogram(binwidth = 0.25, fill = "grey", color = "black") +
-  labs(title = "Distribution of Star Ratings",
-       x = "Stars",
-       y = "Frequency") +
+  labs(
+    title = "Distribution of Star Ratings",
+    x = "Stars",
+    y = "Frequency"
+  ) +
   theme_minimal()
 ```
 
@@ -247,7 +249,7 @@ modelsummary(list("Coefficients and Cutpoints" = model))
 #| warning: false
 
 modelplot(model, conf_level = 0.9) +
- labs(x = "Coefficient Estimates and Their 90% Credible Intervals")
+  labs(x = "Coefficient Estimates and Their 90% Credible Intervals")
 ```
 
 # Discussion {#sec-discussion}
@@ -289,9 +291,11 @@ data_normalized <- data_counts |>
 data_normalized |>
   ggplot(aes(x = cuisine, y = normalized_count, fill = factor(price))) +
   geom_bar(stat = "identity") +
-  labs(x = "Cuisine",
-       y = "Percentage",
-       fill = "Price Range") +
+  labs(
+    x = "Cuisine",
+    y = "Percentage",
+    fill = "Price Range"
+  ) +
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 ```
@@ -313,7 +317,7 @@ cuisine_summary <- data %>%
 # Plot number of restaurants vs average rating
 ggplot(cuisine_summary, aes(x = num_restaurants, y = avg_rating)) +
   geom_point() +
-  geom_text(aes(label=cuisine), nudge_y = 0.02, size = 3, angle = 25) +
+  geom_text(aes(label = cuisine), nudge_y = 0.02, size = 3, angle = 25) +
   labs(x = "Number of Restaurants", y = "Average Rating") +
   theme_minimal()
 ```
@@ -331,14 +335,16 @@ We also observed that higher price range of a restaurant means the restaurant wi
 
 cuisine_summary <- data %>%
   group_by(cuisine) %>%
-  summarize(avg_price = mean(as.numeric(factor(price), ordered = TRUE)),
-            avg_rating = mean(rating))
+  summarize(
+    avg_price = mean(as.numeric(factor(price), ordered = TRUE)),
+    avg_rating = mean(rating)
+  )
 
 # Plot
 ggplot(cuisine_summary, aes(x = avg_price, y = avg_rating, label = cuisine)) +
   geom_point() +
-  geom_text(aes(label = cuisine), nudge_x = 0.05, nudge_y = 0.05, size = 3, angle = 45, hjust = 1) +  # Add text labels with a slight nudge and angle
-  labs(x = "Average Price", y = "Average Rating",) +
+  geom_text(aes(label = cuisine), nudge_x = 0.05, nudge_y = 0.05, size = 3, angle = 45, hjust = 1) + # Add text labels with a slight nudge and angle
+  labs(x = "Average Price", y = "Average Rating", ) +
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 ```
@@ -363,7 +369,15 @@ Next steps to take are refining this model to take account of different variable
 
 # Cleaned Dataset Interactive Map {#sec-dataset-map}
 
+Be wary of lag, there are tens of thousands of datapoints being plotted, and it may lag on machines that are not fast. 
 
+The raw dataset map is here: [https://alexsohn1126.github.io/yelp-analysis/other/map/rawmap.html](https://alexsohn1126.github.io/yelp-analysis/other/map/rawmap.html)
+
+As you can see, there are no datapoints near Toronto, Montreal, or Calgary like the documentation has stated.
+
+The cleaned dataset map here: [https://alexsohn1126.github.io/yelp-analysis/other/map/map.html](https://alexsohn1126.github.io/yelp-analysis/other/map/map.html)
+
+The datapoints are colored by their price ranges. Clicking on each datapoint will show it's name, rating, cuisine, and price.
 
 # Model details {#sec-model-details}
 
@@ -386,7 +400,6 @@ pp_plot <- pp_check(model) +
   theme_classic() +
   theme(legend.position = "bottom")
 pp_plot
-
 ```
 
 ```{r}
@@ -422,9 +435,8 @@ pvpplot
 #| fig-cap: "Checking the convergence of the MCMC algorithm - Trace Plot"
 
 plot(model, "trace") +
-    theme_minimal() +
-    theme(legend.position = "bottom")
-
+  theme_minimal() +
+  theme(legend.position = "bottom")
 ```
 
 ```{r}
@@ -439,7 +451,6 @@ plot(model, "trace") +
 plot(model, "rhat") +
   theme_minimal() +
   theme(legend.position = "bottom")
-
 ```
 
 \newpage

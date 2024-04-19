@@ -11,9 +11,7 @@
 # You must download the dataset manually.
 
 # Instrucitons (From this repo's README.md):
-# Visit https://www.yelp.com/dataset (Last accessed: 2024 April 15), then click "Download Dataset", 
-# fill out the personal information, and download the JSON (NOT the photos). 
-# Extract and place the files in `data/raw_data` folder (there should be `PLACE_EXTRACTED_YELP_DATASET_HERE` file there). 
+# Visit https://www.yelp.com/dataset (Last accessed: 2024 April 15), then click "Download Dataset",
+# fill out the personal information, and download the JSON (NOT the photos).
+# Extract and place the files in `data/raw_data` folder (there should be `PLACE_EXTRACTED_YELP_DATASET_HERE` file there).
 # There will be multiple JSONs, put all of them in `data/raw_data` folder.
-
-         

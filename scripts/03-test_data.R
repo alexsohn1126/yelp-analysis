@@ -17,7 +17,7 @@ restaurants <- read_parquet("./data/analysis_data/restaurant_data.parquet")
 #### Test data ####
 # Test column types
 is.character(restaurants$restaurant_name)
-is.numeric(restaurants$rating) 
+is.numeric(restaurants$rating)
 is.character(restaurants$cuisine)
 
 # Test rating bounds
@@ -28,4 +28,3 @@ all(restaurants$rating <= 5)
 # Test that categories are types of cuisines that we specified
 cuisines <- c("American", "Mexican", "Italian", "Chinese", "Japanese", "Mediterranean", "Thai", "Vietnamese", "Indian", "Caribbean", "Middle Eastern", "French", "Other")
 all(is.element(restaurants$cuisine, cuisines))
-

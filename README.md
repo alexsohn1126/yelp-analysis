@@ -10,7 +10,7 @@ We use the Yelp dataset to explore and model how different attributes of a resta
 
 The repo is structured as:
 
--   `data/analysis_data` contains the cleaned dataset that was constructed.
+-   `data/analysis_data` contains the cleaned dataset that was constructed from Yelp Dataset.
 -   `models` contains fitted models.
 -   `other` contains the map we've created from the dataset, details about LLM chat interactions, and sketches.
 -   `paper` contains the files used to generate the paper, including the Quarto document and reference bibliography file, as well as the PDF of the paper. 

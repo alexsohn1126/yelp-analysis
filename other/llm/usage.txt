@@ -661,3 +661,195 @@ summary_table <- kable(restaurant_summary, caption = "Summary of Restaurants per
 summary_table
 
 This code will generate a kable table with the truncated percentage to two decimal places and custom headers for each column: Cuisine, Number of Restaurants, and Percentage. Adjust the data dataframe with your own dataset. If you have any further questions or need additional assistance, feel free to ask!
+
+18 April 2024
+
+I want to plot something in R. I have a database of restaurants with their cuisines, and their price ranges, and their review ratings. I want to make a geom_jitter plot where it would show different cuisines on x axis, and their rating in the y axis, and color code them by price ranges. There 4 possible values for the price range.
+ChatGPT
+
+Sure, here's how you can create a geom_jitter plot in R using ggplot2 to visualize the relationship between cuisines, their ratings, and their price ranges:
+
+R
+
+# Load necessary libraries
+library(ggplot2)
+
+# Sample data (replace this with your actual data)
+restaurant_data <- data.frame(
+  cuisine = sample(c("Italian", "Mexican", "Japanese", "Indian"), 100, replace = TRUE),
+  rating = runif(100, min = 1, max = 5),
+  price_range = sample(c("$", "$$", "$$$", "$$$$"), 100, replace = TRUE)
+)
+
+# Plot
+ggplot(restaurant_data, aes(x = cuisine, y = rating, color = price_range)) +
+  geom_jitter(width = 0.2, height = 0.1) +
+  labs(x = "Cuisine", y = "Rating", color = "Price Range") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+This code will create a scatter plot where each point represents a restaurant. The x-axis represents the cuisines, the y-axis represents the ratings, and the points are colored based on the price range of the restaurant. The theme_minimal() function is used to create a clean and simple plot, and theme(axis.text.x = element_text(angle = 45, hjust = 1)) rotates the x-axis labels for better readability.
+User
+Actually, let's make this a scatter plot with rating on the x axis and price range in the y axis, disregard the cuisines for now.
+ChatGPT
+
+Got it. Here's how you can create a scatter plot with rating on the x-axis and price range on the y-axis:
+
+R
+
+# Load necessary libraries
+library(ggplot2)
+
+# Sample data (replace this with your actual data)
+restaurant_data <- data.frame(
+  cuisine = sample(c("Italian", "Mexican", "Japanese", "Indian"), 100, replace = TRUE),
+  rating = runif(100, min = 1, max = 5),
+  price_range = sample(c("$", "$$", "$$$", "$$$$"), 100, replace = TRUE)
+)
+
+# Define the order of price ranges for y-axis
+price_order <- c("$", "$$", "$$$", "$$$$")
+
+# Plot
+ggplot(restaurant_data, aes(x = rating, y = price_range, color = price_range)) +
+  geom_point() +
+  labs(x = "Rating", y = "Price Range", color = "Price Range") +
+  scale_y_discrete(limits = price_order) +
+  theme_minimal()
+
+This will create a scatter plot where each point represents a restaurant. The x-axis represents the ratings of the restaurants, the y-axis represents the price range, and the points are colored based on the price range of the restaurant.
+User
+I don't like that either, maybe we should do a scatterplot, with number of restaurants in the X axis, and the average rating of the cuisine on the y axis?
+ChatGPT
+
+Sure, we can create a scatter plot with the number of restaurants in the x-axis and the average rating of the cuisine on the y-axis. Here's how you can do it:
+
+R
+
+# Load necessary libraries
+library(ggplot2)
+library(dplyr)
+
+# Sample data (replace this with your actual data)
+restaurant_data <- data.frame(
+  cuisine = sample(c("Italian", "Mexican", "Japanese", "Indian"), 100, replace = TRUE),
+  rating = runif(100, min = 1, max = 5),
+  price_range = sample(c("$", "$$", "$$$", "$$$$"), 100, replace = TRUE)
+)
+
+# Calculate the number of restaurants and average rating for each cuisine
+cuisine_summary <- restaurant_data %>%
+  group_by(cuisine) %>%
+  summarize(num_restaurants = n(), avg_rating = mean(rating))
+
+# Plot
+ggplot(cuisine_summary, aes(x = num_restaurants, y = avg_rating)) +
+  geom_point() +
+  labs(x = "Number of Restaurants", y = "Average Rating", title = "Average Rating vs. Number of Restaurants by Cuisine") +
+  theme_minimal()
+
+This code calculates the number of restaurants and the average rating for each cuisine from your data, and then creates a scatter plot where each point represents a cuisine. The x-axis represents the number of restaurants for each cuisine, and the y-axis represents the average rating of the cuisine.
+User
+Can we mark each point in the scatterplot with their cuisine?
+ChatGPT
+
+Certainly! You can achieve this by adding text labels to each point in the scatter plot. Here's how you can modify the code to include text labels for each cuisine:
+
+R
+
+# Load necessary libraries
+library(ggplot2)
+library(dplyr)
+
+# Sample data (replace this with your actual data)
+restaurant_data <- data.frame(
+  cuisine = sample(c("Italian", "Mexican", "Japanese", "Indian"), 100, replace = TRUE),
+  rating = runif(100, min = 1, max = 5),
+  price_range = sample(c("$", "$$", "$$$", "$$$$"), 100, replace = TRUE)
+)
+
+# Calculate the number of restaurants and average rating for each cuisine
+cuisine_summary <- restaurant_data %>%
+  group_by(cuisine) %>%
+  summarize(num_restaurants = n(), avg_rating = mean(rating))
+
+# Plot
+ggplot(cuisine_summary, aes(x = num_restaurants, y = avg_rating, label = cuisine)) +
+  geom_point() +
+  geom_text(nudge_x = 0.5, nudge_y = 0.1, size = 3) +  # Add text labels with a slight nudge
+  labs(x = "Number of Restaurants", y = "Average Rating", title = "Average Rating vs. Number of Restaurants by Cuisine") +
+  theme_minimal()
+
+This code adds label = cuisine to the aes() function in ggplot(), which assigns the cuisine names as text labels for each point. The geom_text() function adds these text labels to the plot, with a slight nudge (nudge_x and nudge_y) to avoid overlapping with the points.
+User
+geom_text is missing the label apparently.
+ChatGPT
+
+You're correct. My mistake. We need to specify the label aesthetic inside the geom_text() function to ensure the text labels are displayed correctly. Here's the corrected code:
+
+R
+
+# Plot
+ggplot(cuisine_summary, aes(x = num_restaurants, y = avg_rating, label = cuisine)) +
+  geom_point() +
+  geom_text(aes(label = cuisine), nudge_x = 0.5, nudge_y = 0.1, size = 3) +  # Add text labels with a slight nudge
+  labs(x = "Number of Restaurants", y = "Average Rating", title = "Average Rating vs. Number of Restaurants by Cuisine") +
+  theme_minimal()
+
+Now the geom_text() function includes aes(label = cuisine) to specify that the cuisine column should be used as the label for each point. This will ensure that each point in the scatter plot is marked with its respective cuisine name.
+User
+I want to tilt the text counter clockwise, how do i do it?
+ChatGPT
+
+You can tilt the text counter-clockwise by adjusting the angle parameter within the element_text() function in the theme() settings. Here's how you can modify the code to tilt the text:
+
+R
+
+# Plot
+ggplot(cuisine_summary, aes(x = num_restaurants, y = avg_rating, label = cuisine)) +
+  geom_point() +
+  geom_text(aes(label = cuisine), nudge_x = 0.5, nudge_y = 0.1, size = 3, angle = 45, hjust = 1) +  # Add text labels with a slight nudge and angle
+  labs(x = "Number of Restaurants", y = "Average Rating", title = "Average Rating vs. Number of Restaurants by Cuisine") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))  # Rotate x-axis labels for better readability
+
+In the geom_text() function, angle = 45 specifies the counter-clockwise tilt angle of the text labels. Additionally, hjust = 1 ensures the text is right-aligned with its corresponding point. This combination will tilt the text labels counter-clockwise by 45 degrees.
+User
+Now, I want average price of a cuisine on x axis, and the average rating on the y axis.
+ChatGPT
+
+To plot the average price of a cuisine on the x-axis and the average rating on the y-axis, you'll first need to calculate these averages for each cuisine in your dataset. Then, you can create a scatter plot using ggplot2. Here's how you can do it:
+
+R
+
+# Load necessary libraries
+library(ggplot2)
+library(dplyr)
+
+# Sample data (replace this with your actual data)
+restaurant_data <- data.frame(
+  cuisine = sample(c("Italian", "Mexican", "Japanese", "Indian"), 100, replace = TRUE),
+  rating = runif(100, min = 1, max = 5),
+  price_range = sample(c("$", "$$", "$$$", "$$$$"), 100, replace = TRUE)
+)
+
+# Calculate the average price and average rating for each cuisine
+cuisine_summary <- restaurant_data %>%
+  group_by(cuisine) %>%
+  summarize(avg_price = mean(as.numeric(factor(price_range), ordered = TRUE)),
+            avg_rating = mean(rating))
+
+# Plot
+ggplot(cuisine_summary, aes(x = avg_price, y = avg_rating, label = cuisine)) +
+  geom_point() +
+  geom_text(aes(label = cuisine), nudge_x = 0.05, size = 3, angle = 45, hjust = 1) +  # Add text labels with a slight nudge and angle
+  labs(x = "Average Price", y = "Average Rating", title = "Average Rating vs. Average Price by Cuisine") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))  # Rotate x-axis labels for better readability
+
+In this code:
+
+    avg_price is calculated as the mean of the price range, assuming that the price range is ordered (i.e., "$" < "$$" < "$$$" < "$$$$").
+    avg_rating is calculated as the mean of the rating for each cuisine.
+    The scatter plot is created with avg_price on the x-axis and avg_rating on the y-axis.
+    Text labels for each cuisine are added to the plot with a counter-clockwise tilt angle of 45 degrees.

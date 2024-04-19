@@ -1,11 +1,11 @@
 ---
-title: "Cuisine and Yelp Ratings"
+title: "Modelling the Yelp Rating of Restaurants: Disparity of Rating Between Restaurant Cuisines and Prices"
 author: 
   - Moohaeng Sohn
 thanks: "Code and data are available at: [https://github.com/alexsohn1126/yelp-analysis](https://github.com/alexsohn1126/yelp-analysis)"
 date: today
 date-format: long
-abstract: "First sentence. Second sentence. Third sentence. Fourth sentence."
+abstract: "We use the Yelp dataset to explore and model how different attributes of a restaurant play a factor in the review ratings. We found there are some variables which are promising predictors for the rating of a restaurant. Cuisines such as Chinese or Mexican tended to have lower ratings, and lower priced cuisines performed worse. This study can be used to predict whether a restaurant will be successful or not."
 format: pdf
 number-sections: true
 toc: true
@@ -33,15 +33,17 @@ Thanks to internet technology, we can get hundreds, if not thousands of reviews 
 
 Yelp is a website where people can post reviews about local businesses, containing 287 million reviews [@yelpfacts]. Yelp's reviews are based on the 5-star system. Users can choose between one to five stars to put on their review. These reviews are collected and averaged, which becomes the rating for the establishment. We will use a dataset from Yelp which we will dive into in @sec-data.
 
-TODO: ADD THINGS ABOUT WHAT WE FOUND OUT AND WHY IS IT IMPORTANT
-
 In this paper, our estimand of interest is how different factors such as the cuisine of the restaurant, or the price of the menu items in the restaurants affect the rating of a restaurant. We will first explore the dataset in @sec-data, and discuss the model the relationship between aforementioned variables using logistic regression in @sec-model. Then we will look at the results in @sec-res, finally discussing about these results in @sec-discussion.
 
-We used the programming language R [@citeR], along with packages `tidyverse` [@tidyverse], `rstanarm` [@rstanarm], `jsonlite` [@jsonlite], `arrow` [@arrow], `modelsummary` [@modelsummary], `kableExtra` [@kableExtra], `here` [@here].
+We found out that higher the price of a restaurant, more likely it will have a higher rating, though with a couple of exceptions. And certain cuisines performed significantly worse than other cuisines. We discuss why that may be the case using graphs and tables in @sec-discussion. This study may be important to entrepreneurs whom may be interested in how these reviews may possibly be biased due to the cuisine and the price of a restaurant.
+
+We used the programming language R [@citeR], along with packages `tidyverse` [@tidyverse], `rstanarm` [@rstanarm], `jsonlite` [@jsonlite], `arrow` [@arrow], `modelsummary` [@modelsummary], `kableExtra` [@kableExtra], `here` [@here], `leaflet` [@leaflet], `htmlwidgets` [@htmlwidgets].
 
 # Data {#sec-data}
 
-The restaurant review dataset we will use is from Yelp. Yelp offers an academic dataset for the public to use, although it is a small subset of their massive database [@yelpdataset-faq]. The dataset is split between multiple JSON files, but we will only focus on businesses JSON. The raw businesses dataset contains 150,346 businesses. These businesses are from metropolitan areas in United States and Canada. Specifically, from metropolitan areas near Montreal, Calgary, Toronto, Pittsburgh, Charlotte, Urbana-Champaign, Phoenix, Las Vegas, Madison, and Cleveland [@yelpdataset-faq].
+The restaurant review dataset we will use is from Yelp. Yelp offers an academic dataset for the public to use, although it is a small subset of their massive database [@yelpdataset-faq]. The dataset is split between multiple JSON files, but we will only focus on businesses JSON. The raw businesses dataset contains 150,346 businesses. 
+
+These businesses are from metropolitan areas in United States and Canada. Yelp claims these restaurants are from metropolitan areas near Montreal, Calgary, Toronto, Pittsburgh, Charlotte, Urbana-Champaign, Phoenix, Las Vegas, Madison, and Cleveland [@yelpdataset-faq]. But if you map out the raw dataset as we did in @sec-dataset-map, you will see that there are no restaurants from cities such as Toronto or Montreal or Calgary. This is an error on Yelp's data documentation, but we won't be dealing with locations of restaurants directly, so we won't be heavily affected by this error.
 
 Another possible source of restaurant reviews could have been from Google reviews of restaurants, but that requires us to use Google Business Profile APIs, which cost money. There is always an option to perform webscraping, but this is a gray area legally, and may be computationally expensive. There are other review websites such as TripAdvisor, but they do not seem to have a dataset open to the public like Yelp does.
 
@@ -60,7 +62,7 @@ Star rating is the average star rating of a restaurant. One odd thing about the 
 #| fig-cap: Distribution of Star Ratings
 #| echo: false
 
-data %>%
+data |>
   ggplot(aes(x = rating)) +
   geom_histogram(binwidth = 0.25, fill = "grey", color = "black") +
   labs(title = "Distribution of Star Ratings",
@@ -74,7 +76,7 @@ data %>%
 #| tbl-cap: "Summary Statistics of Star Ratings"
 #| echo: false
 
-summary_stats <- data %>%
+summary_stats <- data |>
   summarize(
     Count = n(),
     Mean = mean(rating),
@@ -102,18 +104,18 @@ Categories for a restaurant describes what kind of business it is. These categor
 #| echo: false
 
 # Calculate the count of restaurants per category
-restaurant_summary <- data %>%
-  group_by(cuisine) %>%
-  summarize(restaurants_count = n()) %>%
+restaurant_summary <- data |>
+  group_by(cuisine) |>
+  summarize(restaurants_count = n()) |>
   ungroup()
 
 # Calculate the percentage of restaurants per category
 total_restaurants <- nrow(data)
-restaurant_summary <- restaurant_summary %>%
+restaurant_summary <- restaurant_summary |>
   mutate(percentage = round((restaurants_count / total_restaurants) * 100, 2))
 
 # Arrange the result by frequency in descending order
-restaurant_summary <- restaurant_summary %>%
+restaurant_summary <- restaurant_summary |>
   arrange(desc(restaurants_count))
 
 # Rename the columns
@@ -125,7 +127,7 @@ kable(restaurant_summary)
 
 ## Price Range
 
-The price range is given as an integer from 1 to 4, inclusive. This is supposed to indicate how expensive the restaurant is per person. 1 being more affordable, and 4 being more expensive. There were restaurants with no price ranges, and those were discarded from the cleaned dataset. On Yelp's website, these price ranges are shown as number of dollar signs equal to the price range. For example, Yelp would show one dollar sign if price range is 1.
+The price range is given as an integer from 1 to 4, inclusive. This is supposed to indicate how expensive the restaurant is per person. 1 being more affordable, and 4 being more expensive. There were restaurants with no price ranges, and those were discarded from the cleaned dataset. On Yelp's website, these price ranges are shown as number of dollar signs equal to the price range. For example, Yelp would show one dollar sign if price range is 1. 
 
 @Tbl-price-range-summary shows that the over 95% of the restaurants have price range of 1 or 2. About 95.81% of restaurants in the database are in price range 1 or 2. Only 3.73% of the restaurants are in price range 3, and even less, 0.46% of the restaurants are in price range 4.
 
@@ -135,18 +137,18 @@ The price range is given as an integer from 1 to 4, inclusive. This is supposed 
 #| echo: false
 
 # Calculate the count of restaurants per category
-restaurant_summary <- data %>%
-  group_by(price) %>%
-  summarize(restaurants_count = n()) %>%
+restaurant_summary <- data |>
+  group_by(price) |>
+  summarize(restaurants_count = n()) |>
   ungroup()
 
 # Calculate the percentage of restaurants per category
 total_restaurants <- nrow(data)
-restaurant_summary <- restaurant_summary %>%
+restaurant_summary <- restaurant_summary |>
   mutate(percentage = round((restaurants_count / total_restaurants) * 100, 2))
 
 # Arrange the result by frequency in descending order
-restaurant_summary <- restaurant_summary %>%
+restaurant_summary <- restaurant_summary |>
   arrange(price)
 
 # Rename the columns
@@ -162,7 +164,24 @@ For star ratings, the minimum star rating is one and the maximum star rating is 
 
 As mentioned above, categories for a restaurant is not given automatically, rather given by the business owners. This means it can be a bit inaccurate when it comes to what exact cuisine that a restaurant serves. Another way the cuisines can be inaccurate is when a restaurant serves foods from multiple cuisines. This makes it complicated to categorize them exactly into each cuisine.
 
-The exact method of how the price range was decided by Yelp is not known. We can make guesses about what kind of information they use to determine the price range, but no clear documentation is available for the price range statistics. We were able to find online discussions about the price range being decided by the check-in feature of Yelp, possibly implying that there are certain price ranges that Yelp uses to display these price ranges [@yelppricedef].
+Yelp decides the price of the restaurant by crowdsourcing the price of the restaurant [@Yu_Margolin_2021]. According to @Yu_Margolin_2021, the price range of the restaurant is decided by the price brackets as shown in @tbl-prices.
+
+```{r}
+#| echo: false
+#| eval: true
+#| label: tbl-prices
+#| tbl-cap: "Table of how Yelp Maps Price Ranges"
+#| warning: false
+
+# Make a tibble of prices, and its corresponding value in our dataset
+tableData <- tibble(
+  price_range_num = 1:4,
+  price_brackets = c("Under $10", "$11 - $30", "$31 - $60", "Over $61")
+)
+
+# Print table
+kable(tableData, align = c("c", "c"), col.names = c("Price Range Number", "Price"))
+```
 
 # Model {#sec-model}
 
@@ -204,82 +223,147 @@ Our results are summarized in @tbl-modelresults, and @fig-modelresults.
 
 The rows with numbers and a vertical line between them are the cutpoints. For example, a rating would be considered 1.5 if we had a $y^*$ that is greater than $1.0|1.5$ and less than $1.5|2.0$.
 
-We can see that nearly all cuisines has a positive effect on the rating, except for Chinese.
+One thing to note is that `rstanarm` takes the first factor from increasing lexicographic order and sets it as a default. So you won't see American cuisine nor price range of 1 in @tbl-modelresults and @fig-modelresults. So every coefficient listed here is how different cuisines/price ranges perform *compared to* American cuisine and price range of 1.
+
+With that in mind, let's explore how different cuisines perform compared to American cuisine. Most cuisines are likely to increase the rating of a restaurant. However, according to our model, if a restaurant serves Chinese cuisine, it will receive a slightly lower rating than American restaurants. Also, a restaurant serving Italian or Mexican cuisines will receive roughly the same rating, as that of an American restaurant. Rest of the cuisines perform better than American cuisine.
+
+And as for price ranges, we can see compared to restaurants with price range of 1, those with price range 2 gets significantly higher rating. The increase of rating from going from price range of 1 to 2 is larger than that of 2 to 3, and that is larger still than that of 3 to 4. In other words, we have diminishing returns as the price range increases on the rating of the restaurant.
 
 ```{r}
 #| echo: false
 #| eval: true
 #| label: tbl-modelresults
-#| tbl-cap: "Explanatory models of flight time based on wing width and wing length"
+#| tbl-cap: "Table of how different cuisines and price range affects the rating of a restaurant"
 #| warning: false
 
-#modelsummary(list("my model" = model))
+modelsummary(list("Coefficients and Cutpoints" = model))
 ```
 
 ```{r}
 #| echo: false
 #| eval: true
 #| label: fig-modelresults
-#| fig-cap: "Explanatory models of flight time based on wing width and wing length"
+#| fig-cap: "Exploring The effects of cuisines and price ranges on the rating of a Restaurant"
 #| warning: false
 
-#modelplot(model, conf_level = 0.9) +
- # labs(x = "90% credibility interval")
+modelplot(model, conf_level = 0.9) +
+ labs(x = "Coefficient Estimates and Their 90% Credible Intervals")
 ```
 
 # Discussion {#sec-discussion}
 
-## First discussion point {#sec-first-point}
+## Rating Disparity Between Cuisines {#sec-first-point}
+
+Certain cuisines had worse effect on restaurant rating than others. Namely, Chinese, American, Italian, and Mexican cuisines had noticeably worse rating than others. While it is plausible to state that restaurants with certain cuisines are simply worse, we will try to explain this backed with research.
+
+As for Chinese cuisine, one possible cause is the stigma around Chinese food. Chinese restaurant syndrome was a list of symptoms supposedly linked by Chinese restaurants' excessive usage of monosodium glutamate (MSG) [@Mekkodathil_Sathian_2017]. Dr. Robert Ho Man Kwok first coined the term "Chinese Restaurant Syndrome" back in April of 1968, sending a letter to the New England Journal of Medicine [@LeMesurier_2017]. This stigma against Chinese restaurants could still be remaining today, leading to a lower rating.
+
+American, Italian, and Mexican cuisine's bad performance could be explained by the demographic of the restaurants. All the restaurants in the dataset are in United States and Canada. All 3 aforementioned cuisines have very close ties with these countries. American cuisine is from United States. Italian cuisine is from Italy, but a lot of Italians are living in North America. Around 16 million Italian descendants are living in United States [@USCensus], and 1.5 million in Canada [@canadaCensus]. Mexico shares a border with United states, therefore a ton of cultural influences were made in southern United States by Mexicans. What we propose is that people rate restaurants that serve foods from their own culture harshly. For example, people who have Mexican parents or has been raised with Mexican culture will have higher standards for Mexican food.
+
+We can try attributing this to the fact that different cuisines will have different price ranges. Therefore one can argue that those cuisines with higher proportion of low price restaurants will be more likely to have lower ratings. @Fig-cuisine-price-rel shows each cuisine's price range proportions. It shows that while Chinese and Mexican restaurants have high proportion of restaurants with price range of 1, but it is not the case for American and Italian cuisine. 
 
 ```{r}
-#| label: fig-bills
-#| fig-cap: Bills of penguins
+#| label: fig-cuisine-price-rel
+#| fig-cap: "Relationship between Cuisine and Price Range (Normalized)"
 #| echo: false
 #| warning: false
 #| message: false
 
-data_counts <- data %>%
-  group_by(cuisine, price) %>%
-  summarize(count = n()) %>%
+data_counts <- data |>
+  group_by(cuisine, price) |>
+  summarize(count = n()) |>
   ungroup()
 
 # Calculate the total count of each cuisine category
-cuisine_total_counts <- data_counts %>%
-  group_by(cuisine) %>%
+cuisine_total_counts <- data_counts |>
+  group_by(cuisine) |>
   summarize(total_count = sum(count))
 
 # Merge the counts with the total counts
-data_normalized <- data_counts %>%
-  left_join(cuisine_total_counts, by = "cuisine") %>%
-  mutate(normalized_count = count / total_count)
+data_normalized <- data_counts |>
+  left_join(cuisine_total_counts, by = "cuisine") |>
+  mutate(normalized_count = count / total_count) |>
+  arrange(count)
 
 # Plot the relationship between cuisine and price range with normalized counts
-data_normalized %>%
+data_normalized |>
   ggplot(aes(x = cuisine, y = normalized_count, fill = factor(price))) +
   geom_bar(stat = "identity") +
-  labs(title = "Relationship between Cuisine and Price Range (Normalized)",
-       x = "Cuisine",
+  labs(x = "Cuisine",
        y = "Percentage",
        fill = "Price Range") +
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 ```
 
-If my paper were 10 pages, then should be be at least 2.5 pages. The discussion is a chance to show off what you know and what you learnt from all this.
+Another interesting insight is that these 4 cuisines we have listed as "worse" than others are the top 4 cuisines excluding "Other" category in our dataset (Check @tbl-category-summary). Perhaps more restaurants there are for certain cuisines, people's expectations are higher, leading to lower rating for "average" experiences in those restaurants. @Fig-cuisine-ratings shows the relationship between the number of restaurant and the rating that a cuisine has. We can clearly see there is a downward trend as number of restaurants increase. This could have occurred because people associate rare cuisine as being better. Also, there is a possibility that the owners that would care about their Yelp categories are also more likely to care about the service and the food of the restaurant.
 
-## Second discussion point
+```{r}
+#| label: fig-cuisine-ratings
+#| fig-cap: "Average Rating vs. Number of Restaurants by Cuisine"
+#| echo: false
+#| warning: false
+#| message: false
 
-## Third discussion point
+# Get average rating per cuisine
+cuisine_summary <- data %>%
+  group_by(cuisine) %>%
+  summarize(num_restaurants = n(), avg_rating = mean(rating))
+
+# Plot number of restaurants vs average rating
+ggplot(cuisine_summary, aes(x = num_restaurants, y = avg_rating)) +
+  geom_point() +
+  geom_text(aes(label=cuisine), nudge_y = 0.02, size = 3, angle = 25) +
+  labs(x = "Number of Restaurants", y = "Average Rating") +
+  theme_minimal()
+```
+
+## Price Range and Rating
+
+We also observed that higher price range of a restaurant means the restaurant will higher ratings. We have expected this in the model section, but the diminishing returns of ratings as price increases was not expected. We can plot out the relationship between the price and the rating by cuisine to further illustrate this idea. @Fig-rating-price shows that the lower rating cuisines do have lower average prices. But there are cuisines, such as Caribbean or Vietnamese that has a high rating, yet with lower average prices. The figure shows that for some cuisines, their price range doesn't affect their ratings.
+
+```{r}
+#| echo: false
+#| eval: true
+#| label: fig-rating-price
+#| fig-cap: "Average Rating vs. Average Price by Cuisine"
+#| warning: false
+
+cuisine_summary <- data %>%
+  group_by(cuisine) %>%
+  summarize(avg_price = mean(as.numeric(factor(price), ordered = TRUE)),
+            avg_rating = mean(rating))
+
+# Plot
+ggplot(cuisine_summary, aes(x = avg_price, y = avg_rating, label = cuisine)) +
+  geom_point() +
+  geom_text(aes(label = cuisine), nudge_x = 0.05, nudge_y = 0.05, size = 3, angle = 45, hjust = 1) +  # Add text labels with a slight nudge and angle
+  labs(x = "Average Price", y = "Average Rating",) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+This could have possibly been caused by simply those with lower prices cannot afford decent service and food, but that still does not explain the low average rating of Italian and American restaurants which have higher costs yet near the same rating as Mexican and Chinese restaurants. Another way this could have been caused is because, again, people rate rarer cuisines higher than common ones. So perhaps in later studies, more research can be done with those rarity in mind.
 
 ## Weaknesses and next steps
 
-Weaknesses and next steps should also be included.
+A weakness that we have observed is that there may not be enough variables in our model to correctly model the rating. We could have added more factors, such as how rare the cuisine is in the dataset, or the number of reviews. We might have enough information to perform post-stratification with the number of ratings for a restaurant, but that would require a reliable, bigger dataset on reviews of restaurants which we do not have access to. 
+
+Another limitation could have been in how we clean our data. We selected businesses that had restaurant-related categories in Yelp, but there is likely to be many businesses which forgot to add the restaurant related categories on Yelp, or simply does not care. Therefore, filtering restaurants by categories is unreliable.
+
+The data itself is also a limitation. The data only contains restaurants from big cities, such as Toronto, Vancouver, and Las Vegas. This could have caused a skew in our dataset, over-representing restaurants in bigger cities, and not those in the smaller, suburban communities. Not only that, the ratings of restaurants were given in 0.5 increments which meant it isn't the most accurate rating we could have gotten.
+
+Next steps to take are refining this model to take account of different variables that were missed in this paper and improving the predictability of the model. Perhaps with a newer database, this study shall be repeated too. 
 
 \newpage
 
 \appendix
 
 # Appendix {.unnumbered}
+
+# Cleaned Dataset Interactive Map {#sec-dataset-map}
+
+
 
 # Model details {#sec-model-details}
 
@@ -338,6 +422,7 @@ pvpplot
 #| fig-cap: "Checking the convergence of the MCMC algorithm - Trace Plot"
 
 plot(model, "trace") +
+    theme_minimal() +
     theme(legend.position = "bottom")
 
 ```

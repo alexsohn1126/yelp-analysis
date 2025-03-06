@@ -22,7 +22,7 @@ LLM such as ChatGPT was used to assist writing scripts. Further details on the u
 
 ## Downloading dataset
 
-The original dataset was too big to include in this repo. Visit <https://www.yelp.com/dataset> (Last accessed: 2024 April 15), then click "Download Dataset", fill out the personal information, and download the JSON (NOT the photos). Extract and place the files in `data/raw_data` folder (there should be `PLACE_EXTRACTED_YELP_DATASET_HERE` file there).
+The original dataset was too big to include in this repo. Visit [https://www.yelp.com/dataset](https://www.yelp.com/dataset) (Last accessed: 2024 April 15), then click "Download Dataset", fill out the personal information, and download the JSON (NOT the photos). Extract and place the files in `data/raw_data` folder (there should be `PLACE_EXTRACTED_YELP_DATASET_HERE` file there).
 
 ## Interactive Map
 
